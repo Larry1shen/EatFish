@@ -1,0 +1,3 @@
+MoveFish（ele，direction，distance）
+	diretion=0/90/180/270
+	 （每次）移动最多capabilities[n].pixels以内的像点距离，capabilities[n].times=id为n的鱼的每个循环内可以移动的次数。
