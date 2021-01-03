@@ -220,7 +220,7 @@
 
         // function 
         function collision(id) { //小鱼与小鱼或食物碰撞，但吃不了，扣分          保持.step,.freq为整数！！！  
-            allinfo[id].power = Math.round(Math.max(0,allinfo[id].power-0.1)*10/10);
+            allinfo[id].power = Math.round(Math.max(0,allinfo[id].power-0.1)*10)/10; //扣除0.1的武力值
             if (--allinfo[id].sstep < -10) { 
                 if (allinfo[id].step>1)  {allinfo[id].step--; allinfo[id].sstep +=10;} // 有资本就扣除
             }
