@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Fishing v10正式版</title>
+
+        <style type="text/css">
+            #controls {
+                position: fixed;
+                right: 0;
+                top: 0;
+                width: 24%;
+                height: 15%;
+                border:1px solid #666565;
+                overflow:auto;
+            }
+            #status {
+                position: fixed;
+                right: 0;
+                top: 16%;
+                width: 24%;
+                height: 63%;
+                border:1px solid #757373;
+                overflow:auto;
+            }
+            #rightsidebar {
+                position: fixed;
+                right: 0;
+                bottom: 0;
+                width: 24%;
+                height: 20%;
+                border:1px solid #757373;
+                overflow:auto;
+            }
+            svg {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100%;
+                width: 75%;
+                border:1px solid #cd0000;
+            }
+        </style>
+        <link rel="shortcut icon" href="#" />
+        <script src="https://code.jquery.com/jquery-3.5.1.js" ></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    </head>
+    <!-- //1.12.4.js" -->
+    <body>
+        <div id="controls">
+            <!-- 新创建小鱼的X坐标 <input type="text" name="x" value="50" />
+            新创建小鱼的Y坐标 <input type="text" name="y" value="50" /> -->
+            <button onclick="Create('fish')"> 创建小鱼 </button> 
+            <button onclick="Create('circle')"> 创建圆圈 </button> 
+            <button onclick="Create('square')"> 创建方块 </button> 
+            <button onclick="Create('triangle')"> 创建三角 </button> 
+            <button onclick="StartGame()"> 开始游戏 </button> <br> <br>
+            
+            <button  onclick="MoveFish(document.getElementsByName('fishManipulated')[0].value, D_WEST, 1)"> 左移 </button> 
+            <button  onclick="MoveFish(document.getElementsByName('fishManipulated')[0].value, D_EAST, 1)"> 右移 </button> 
+            <button  onclick="MoveFish(document.getElementsByName('fishManipulated')[0].value, D_NORTH,1)"> 上移 </button> 
+            <button  onclick="MoveFish(document.getElementsByName('fishManipulated')[0].value, D_SOUTH, 1)"> 下移 </button> 
+            <button  onclick="MoveFish(document.getElementsByName('fishManipulated')[0].value, (allinfo[document.getElementsByName('fishManipulated')[0].value].a+90)%360, 0)"> 右转 </button> 
+            <!-- <input type="text" name="fishManipulated" value="f1" style="width:16px"/> -->
+        </div>
+        <div id="status">
+            <p id="circlenum">圆型食物数：0</p>
+            <p id="squarenum">方形食物数：0</p>
+            <p id="trianglenum">三角食物数：0</p>
+            <p id="fishnum">小鱼条数：0</p>
+        </div>
+
+        <div id="rightsidebar"> 信息栏 <br>       </div>
+
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="main">
+            <rect width="100%", height="100%" style="fill:rgb(255,255,255)" /> <!-- 必须装一个矩形框在里面，否则getBBox()返回高宽为0-->
+            
+            <!-- <g transform="translate(200,200) rotate(90, 225,225)">
+                <polyline points="10,0 40,0 50,10 50,20 60,25 50,30 50,40 40,50 10,50 0,40 30,20 0,10 10,0" 
+                    style="fill:red;stroke:red;stroke-width:3" />
+                <text x="30" y="18" fill="black">2</text>
+            </g> -->  
+        </svg>
+    </body>
+
+    <script type="text/javascript">
+        const D_EAST = 0; // 鱼头的指向
+        const D_WEST = 180;
+        const D_SOUTH = 90;
+        const D_NORTH = 270;
+        const EAT_SIDE = 5;
+        const EAT_HEAD = 10;
+        var allinfo={}; //各小鱼的能力集，{id:"f1", type:"fish", step:最大步数，freq：最大频率，power：武力值, x, y, a}
+        // var allinfo={}; //各食物的坐标，{id:"c1/s1/t1", type:"c/s/t",power,x,y,a} 类型、左上角坐标、朝向、武力值
+        var fsn=0, csn=0, ssn=0, tsn=0; //小鱼序列号， 食物(圆、方、三角）序列号
+        var rightEdge=parseInt(document.getElementById("main").getBBox().width/50 - 2); //body.clientWidth
+        var bottomEdge=parseInt(document.getElementById("main").getBBox().height/50 - 2); //body.clientHeight/50 - 2);
+
+        function Create(str) {
+            var pos = Find_a_place(); //返回一个可用空闲点位放置小鱼，没有空闲位置时返回null
+            if (pos == null) alert("No more place to create anything!")
+            else {
+                var m = document.getElementById("main");
+                var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                var id;
+                if (str == "fish") {
+                    var r = document.createElementNS("http://www.w3.org/2000/svg", "polyline");  //创建polyline对象，即折线对象，如果需要创建其他类型图像，<span style="white-space:pre">												</span>//修改 第二个参数
+                    r.setAttribute("fill", "red"); 
+                    r.setAttribute("points", "40,0 20,0 10,10 10,20 0,25 10,30 10,40 20,50 40,50 50,40 25,25 50,10 40,0");    //设置属性，表面的是折线经过的点的位置
+                    r.setAttribute("stroke", "red");                                 //设置图像颜色
+                    r.setAttribute("stroke-width", "2");                             //设置线宽
+                    g.appendChild(r);                  //添加到g标签中
+
+                    let t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    t.setAttribute("x", "22");
+                    t.setAttribute("y", "18");
+                    t.setAttribute("fill", "black");
+                    t.innerHTML = fsn; //0号给手工控制
+                    g.appendChild(t);
+                    id = "f"+ fsn; 
+                    g.setAttribute("id", id);
+                    g.setAttribute("class", "fish")
+                    m.append(g);
+                    // g.addEventListener('poke', StrategyPool[fsn%5]); //挂载策略函数,以5为周期分别挂载
+                    fsn += 1;//序列号递增
+                    allinfo[id]={id:id, type:"fish", step:1, freq:1, power:0, x:pos[0], y:pos[1], a:0, birth: (new Date()).getTime(), sstep:0, sfreq:0}; //小鱼的初始值
+                    WriteFishPos(g, D_EAST, pos[0], pos[1]);                    
+                } else if (str == "circle") {
+                    let c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    c.setAttribute("cx", pos[0]*50+25);
+                    c.setAttribute("cy", pos[1]*50+25);
+                    c.setAttribute("r", "20");
+                    c.setAttribute("fill", "green");
+                    id = "c" + (++csn);
+                    c.setAttribute("class", "circle");
+                    c.setAttribute("id", id);
+                    m.appendChild(c); //直接附着在main svg上
+                    allinfo[id]={id:id, type:str, power:-11, x:pos[0], y:pos[1], a: 0};                    
+                } else if (str == "square") {
+                    let s = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    s.setAttribute("x", pos[0]*50+5);
+                    s.setAttribute("y", pos[1]*50+5);
+                    s.setAttribute("width", "40");
+                    s.setAttribute("height", "40");
+                    s.setAttribute("fill", "green");
+                    id = "s" + (++ssn);
+                    g.appendChild(s); 
+                    let a =Math.floor(Math.random()*4) * 90 ; //随机生成 0、90、180、270的角度
+                    let aa = a * Math.PI/180 //变为弧度
+                    let c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    c.setAttribute("cx", pos[0]*50+25+20*Math.cos(aa));
+                    c.setAttribute("cy", pos[1]*50+25+20*Math.sin(aa));
+                    c.setAttribute("r", "3");
+                    c.setAttribute("fill", "red");
+                    g.append(c);     //给square标记其方向
+                    g.setAttribute("class", "square");
+                    g.setAttribute("id", id);
+                    m.appendChild(g);
+                    allinfo[id]={id:id, type:str, power: -6, x:pos[0], y:pos[1], a: a};                    
+                } else if (str == "triangle") {
+                    let t = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                    let attr = (pos[0]*50) + "," + (pos[1]*50+25) + " " + (pos[0]*50+50) + "," + (pos[1]*50) + " " + (pos[0]*50+50) +","+(pos[1]*50+50);
+                    t.setAttribute("points", attr); //画出三角形，方向超右
+                    let a = Math.floor(Math.random()*4) * 90 ; //随机生成 0、90、180、270的角度
+                    attr = "rotate(" + a + "," + (pos[0]*50+25) + "," + (pos[1]*50+25) + ")"; //三角形、多边形的旋转中心必须是绝对坐标！！！
+                    t.setAttribute("transform", attr);
+                    t.setAttribute("fill","green");
+                    id = "t" + (++tsn);
+                    t.setAttribute("class", "triangle");
+                    t.setAttribute("id", id);
+                    m.appendChild(t); //直接附着在main svg上
+                    allinfo[id]={id:id, type:str, power: -1, x:pos[0], y:pos[1], a: a};                    
+                }
+                notifyMsg("生成了一个" + str +"("+ allinfo[id].x + "," +allinfo[id].y + ')\n');
+            }
+        }
+
+        function MoveFish(id, dir, step) { // dir为方向，steps为步数，先调整方向然后走步，停下来时不能再次转向，每步合50个像素
+            dir = dir % 360; //去掉360度以上部分
+            if (dir != 90 && dir != 0 && dir != 180 && dir != 270) return null; //旋转方向只能是“上下左右”这4种，否则返回不动
+            var fish = document.getElementById(id);
+            if (allinfo[id].a != dir)  WriteFishPos(fish, dir, allinfo[id].x, allinfo[id].y) //原地转向
+            
+            const path=getpath(allinfo[id], dir, step); //获取一路上的节点坐标，返回一个数组[{x,y},,]
+            for (let i=0; i<path.length; i++) {
+                var obj = WhatsinXY(path[i].x, path[i].y);
+                switch (obj)  { //路径已被占领或者越界，本次移动作废不走
+                    case "out":
+                        notifyMsg(id + "号小鱼的移动通道出界，移动中止！\n");
+                        return null;
+                    case "available": //没有障碍物，继续前进
+                        WriteFishPos(fish, dir, path[i].x, path[i].y)
+                        break;
+                    default:
+                        var ocos = Math.round(Math.cos(obj.a*Math.PI/180)); //一定要四舍五入，否则有误差导致判断不准
+                        var osin = Math.round(Math.sin(obj.a*Math.PI/180));
+                        if (allinfo[id].power > (obj.power + EAT_HEAD))  eat(id, obj);
+                        else if (allinfo[id].power > (obj.power + EAT_SIDE)) {
+                            console.log("side 可以吃侧面");
+                            if ((obj.x + ocos == allinfo[id].x) && (obj.y+osin ==allinfo[id].y)) { //头碰头，扣分
+                                console.log(obj.power, obj.x, obj.y, obj.a,ocos, osin, allinfo[id].x, allinfo[id].y);
+                                collision(id);
+                            } else {
+                                eat(id,obj);
+                            }
+                        } else if (allinfo[id].power > obj.power) { //可以吃尾巴
+                            console.log("tail 只能吃尾巴");
+                            if ((obj.x - ocos==allinfo[id].x) && (obj.y-osin==allinfo[id].y)) { //尾部接近，可以吃
+                                eat(id,obj);
+                            } else {
+                                console.log(obj.power, obj.x, obj.y, obj.a,ocos, osin, allinfo[id].x, allinfo[id].y);
+                                collision(id);
+                            }
+                        } else {
+                            collision(id); //武力值<=目标值，被迫中止！
+                        }
+                        break;                        
+                }
+            }
+        }
+
+        // function 
+        function collision(id) { //小鱼与小鱼或食物碰撞，但吃不了，扣分          保持.step,.freq为整数！！！  
+            allinfo[id].power = Math.round(Math.max(0,allinfo[id].power-0.1)*10/10);
+            if (--allinfo[id].sstep < -10) { 
+                if (allinfo[id].step>1)  {allinfo[id].step--; allinfo[id].sstep +=10;} // 有资本就扣除
+            }
+            if (--allinfo[id].sfreq < -10) { 
+                if (allinfo[id].freq>1)  {allinfo[id].freq--; allinfo[id].sfreq +=10;} // 有资本就扣除
+            }
+            notifyMsg(id + "号小鱼与目标碰撞，但吃不了对方，扣分！\n");
+        }
+
+        function eat(id,obj) { //小鱼吃掉对方，并移动到对方位置
+            let ff = document.getElementById(obj.id);
+            ff.parentElement.removeChild(ff);  //已被吃掉的小鱼或者其他食物, 从屏幕删除了          
+            switch (obj.type)  //吃掉食物增加能力值
+            {
+                case "fish":
+                    allinfo[id].power += Math.round(Math.max(1, allinfo[obj.id].power)*10/10);
+                    break;
+                case "circle":
+                    if (++allinfo[id].sstep > 10) { 
+                        allinfo[id].step++; allinfo[id].sstep -=10; //进位
+                    }
+                    if (++allinfo[id].sfreq >10) { 
+                        allinfo[id].freq++; allinfo[id].sfreq -=10; // 进位
+                    }                    
+                    allinfo[id].power =Math.round((allinfo[id].power+0.1)*10)/10; //只保留一位小数
+                    break;
+                case "square":
+                    allinfo[id].step += 1;
+                    break;
+                case "triangle":
+                    allinfo[id].freq += 1;
+                    break;
+                default:
+                    alert("没有f/c/s/t之外的生物！")
+                    break;
+            }
+            delete allinfo[obj.id]; //删除了该属性（键值对），其属性个数会同步减少，这与数组不同！但obj的内容并没有消失，还可以使用
+            notifyMsg(id + "号小鱼吃掉了一个" + obj.type + "，其ID为" + obj.id + "\n")
+            WriteFishPos(document.getElementById(id), allinfo[id].a, obj.x, obj.y) //svg移动到obj的位置上
+        }
+
+        function WriteFishPos(fish, dir, x, y) { //小鱼，方向，xy点位
+            allinfo[fish.id].x = x;
+            allinfo[fish.id].y = y;
+            allinfo[fish.id].a = dir;             
+            var xforms = "translate(" + x*50 + "," + y*50 + ") rotate(" + dir + ", 25, 25)"; //原地转向
+            fish.setAttribute("transform", xforms);
+            if ((new Date()).getTime() - allinfo[fish.id].birth > 1000) notifyMsg(fish.id + "号小鱼移到(" + x + ',' + y +"), 朝向" + dir + "\n"); //新创建的小鱼出生时间短，在此不输出“移动”信息
+        }
+
+        function notifyMsg(str) {
+            let div = document.getElementById("rightsidebar");
+            div.innerText += str;
+            div.scrollTop = div.scrollHeight; 
+//-------------------------下面刷状态区 ------------------
+            document.getElementById("circlenum").innerText = "圆形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="circle";}).length + "/" + csn + " power=-11";
+            document.getElementById("squarenum").innerText = "方形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="square";}).length + "/" + ssn + " power=-6";
+            document.getElementById("trianglenum").innerText = "三角形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="triangle";}).length + "/" + tsn + "power=-1";
+            let f = document.getElementById("fishnum");
+            f.innerHTML = "小鱼条数：" +  Object.values(allinfo).filter(function(i){return i.type=="fish";}).length + "/" + fsn + "\n"; //用innerHTML清楚了所有内容
+            var tabNode=document.createElement("table");
+            const a=["id","power", "step", "freq", "x", "y", "a", "sstep", "sfreq"];
+            var r=tabNode.insertRow();
+            for (let i=0; i<a.length; i++) {  // 小鱼信息的标题行
+                var c=r.insertCell();
+                c.innerText = a[i]; 
+            }            
+            for (let n in allinfo) { // 刷新小鱼的信息, n是属性名，即各个id号
+                if (allinfo[n].type == "fish") { //只列出小鱼的信息
+                    r=tabNode.insertRow();
+                    for (let i=0; i<a.length; i++) {
+                        c= r.insertCell()
+                        c.innerText=allinfo[n][a[i]];
+                    }       
+                }         
+            }
+            f.appendChild(tabNode);
+        }
+
+        function WhatsinXY(x,y) {  //检查某坐标位置是否已有小鱼在此，如果有，返回xya, 出界返回"out", 可用"availabe"
+            var w = "available";
+            for (let p in allinfo) {
+                if (allinfo[p].x == x && allinfo[p].y == y) w = allinfo[p]; //发现一个坐标相同者即表明该位置已经被占用，注意这里的return语句无效，还是要遍历完成全部元素
+            }
+            if (x < 1 || x > rightEdge || y<1 || y>bottomEdge) w = "out"; //也不能出界，x为 1~22 (50-1100)， y为1-8 (50-400)之间
+            return w;
+        }        
+
+        function IsXYAreaOccupied(x,y) { //检查某坐标及其周围共9个点位是否有小鱼
+            var tf = false;
+            if (x < 1 || x > rightEdge || y<1 || y>bottomEdge) tf = true; //也不能出界，x为 1~22 (50-1100)， y为1-8 (50-400)之间
+            for ( let p in allinfo) {
+                if (Math.abs(allinfo[p].x - x)<3 && Math.abs(allinfo[p].y - y)<3) tf=true; //发现一条小鱼仔附近者即表明该位置已经被占用
+            }
+            for (let p in allinfo) {
+                if (Math.abs(allinfo[p].x - x)<3 && Math.abs(allinfo[p].y - y)<3) tf=true; //发现食物在附近者即表明该位置已经被占用
+            }
+            return tf;
+        }
+
+        function getpath(xya, dir, steps) { //当前地址，方向，格数， 返回路径节点坐标
+            var path=[];
+            if (dir===D_EAST) {
+                for (let i=1; i<=steps; i++) {
+                    path.push({x: xya.x+i, y:xya.y});
+                }
+            } else if (dir === D_NORTH) {
+                for (let i=1; i<=steps; i++) {
+                    path.push({x: xya.x, y:xya.y-i});
+                }
+            } else if (dir === D_SOUTH) {
+                for (let i=1; i<=steps; i++) {
+                    path.push({x: xya.x, y:xya.y+i});
+                }
+            } else if (dir === D_WEST) {
+                for (let i=1; i<=steps; i++) {
+                    path.push({x: xya.x-i, y:xya.y});
+                }
+            }
+            return path; //返回路径节点坐标
+        }
+
+        function Find_a_place(){
+            for (var i=0; i<100; i++) { //最多试探100次，如果找不到一个地方放置小鱼，则禁止创造小鱼了
+                var x = Math.ceil(Math.random()*rightEdge); //x轴共有18个点位，用math.ceil表示0号位跳过不用，但Edge会用到
+                var y = Math.ceil(Math.random()*bottomEdge);  //y轴共有8个点位，50-400
+                if (!IsXYAreaOccupied(x, y)) return [x, y]; // 找到位置就返回
+            } //while (IsXYAreaOccupied(x, y)); //这里while后面的条件语句必须用括号包围，否则编译出错。
+            return null; //没有找到位置，试探100次返回
+        }
+
+
+        
+        function mykb(event) { //键盘处理，挂载方法document.onkeydown = mykb可行，不需要括号()，直接函数指针赋值即可
+            var e = event || window.event || arguments.callee.caller.arguments[0];
+            var id = "f0";
+            if (e && e.keyCode == 40) { 
+                // alert('下键');
+                MoveFish(id, D_SOUTH, 1);
+            }
+            if (e && e.keyCode == 37) { 
+                // alert('左键');
+                MoveFish(id, D_WEST, 1);
+            }
+            if (e && e.keyCode == 39) { 
+                // alert('右键');
+                MoveFish(id, D_EAST, 1);
+            }
+            if (e && e.keyCode == 38) { 
+                // alert('上键');
+                MoveFish(id, D_NORTH, 1);
+            }
+        }
+     
+var StrategyPool=[Strategy1, Strategy2, Strategy3, Strategy5, Strategy5];
+const myEvent = new Event('poke');  // 定制一个消息事件，存为公共变量，用于平台授权小鱼走一次
+
+function StartGame() {
+    document.onkeydown = mykb; //挂载键盘处理，控制
+    
+    // const f = document.getElementById("f2");
+    // var cnt=0;
+    // f.addEventListener('poke', StrategyPool[1]); //可以
+    var mytimer = setInterval(function(){
+        Strategy2("f2");
+        // f.dispatchEvent(myEvent);
+        // cnt +=1;
+        // if (cnt > 300) clearInterval(mytimer); // 关闭这个自动定时调用
+        // console.log("one")
+    }, 500);
+}
+
+    </script>
+    <script src="StrategyFish.js"></script>
+</html>
