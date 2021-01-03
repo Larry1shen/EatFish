@@ -25,23 +25,92 @@ function Strategy1() { //这里e是鼠标点击事件，e.target是点击目标�
     // console.log("e.target.id" + e.target.id);
 }
 
+var bigxy;
+var myset;
 function Strategy2(id) { //找出所有物体离我的距离|x-x1|+|y-y1|，再根据power和朝向计算实用距离，去吃最近的一个
-    let bigxy=FillinBigxy(id);
-    ox=allinfo[id].x; //小鱼的坐标
-    oy=allinfo[id].y;
-    for (let i=1; i<6; i++) { //以小鱼为中心向外蔓延，最多蔓延5层
+    FillinBigxy(id);
+    var ox=allinfo[id].x; //小鱼的坐标
+    var oy=allinfo[id].y;
+    myset = new Set();
+    let searchDistance = Math.max(allinfo[id].x, allinfo[id].y, rightEdge-allinfo[id].x, bottomEdge-allinfo[id].y);
+    for (let i=1; i<searchDistance; i++) { //以小鱼为中心向外蔓延，最多蔓延5层
         for (let a=0; a<360; a+=90) { //遍历4个方向
             let ocos = Math.round(Math.cos(a*Math.PI/180));
             let osin = Math.round(Math.sin(a*Math.PI/180)); //改变符号，与坐标体系匹配，下大上小
-            for (let k=0; k<2*i; k++) { //每条边走2*i
-                let x = ox + i*(ocos+osin) - k*osin;
-                let y = oy + i*(osin-ocos) + k*ocos;
-                if (x>0 && x<=rightEdge && y>0 && y<=bottomEdge)  { //在边界之内
-                    testcircle(x,y);
-                }
+            for (let k=0; k<=i; k++) { //每条边走2*i
+                let x = ox + i*ocos + k*osin;
+                let y=oy+i*osin+k*ocos;
+                if (x>0 && x<=rightEdge && y>0 && y<=bottomEdge) RefreshPath( id,x,y); //先蔓延到最近点 再增大
+
+                x = ox+i*ocos-k*osin;
+                y=oy+i*osin-k*ocos;
+                if (x>0 && x<=rightEdge && y>0 && y<=bottomEdge) RefreshPath( id,x,y); //先蔓延到最近点 再减小
             }
         }
-        alert("完成了一圈！")
+        // alert("完成了一圈！")
+    }
+    var sum=99999, sum2=99999,fx,fy;
+    for (let i of myset) { //本循环找出最近的食物，距离为sum，
+        let y=parseInt(i/10000);
+        let x=i%10000;
+        RefreshPath(id, x-1, y);
+        RefreshPath(id, x, y-1);
+        RefreshPath(id, x+1, y);
+        RefreshPath(id, x, y+1);
+        RefreshPath(id, x, y); //将小鱼、食物的路径再次刷新，以保证迂回路径可达
+        if ((sum>bigxy[y][x].sum) || (sum == bigxy[y][x].sum && sum2>bigxy[y][x].sum2 )) {
+            sum = bigxy[y][x].sum;
+            fx = x; //这就是最近的食物！！！地址为fx，fy
+            fy = y;
+        }
+        // testcircle(element.x, element.y);
+    }
+
+    if (sum != 99999) {
+        do {
+            testcircle(fx,fy);
+            let xx =bigxy[fy][fx].x; //暂存x以保证bigxy参数稳定
+            fy=bigxy[fy][fx].y;
+            fx=xx;
+        } while (fx!=allinfo[id].x || fy!= allinfo[id].y);
+    }
+
+}
+
+function RefreshPath(id, ox, oy) { //更新坐标（x,y)到id点的最短路径，从4个方向寻找最短路径，并记录路径数组
+    console.log(ox, oy);
+    if (bigxy[oy][ox] == null)    bigxy[oy][ox]={sum:99999, sum2:99999,x:0,y:0}; //默认路径很长、转折点很多，必须在此赋值，否则不能增加属性
+    else { //不管是空或者有数据，均初始化
+        bigxy[oy][ox]["sum"]=99999;
+        bigxy[oy][ox]["sum2"]=99999;
+        bigxy[oy][ox]["x"]=99999;
+        bigxy[oy][ox]["y"]=99999;
+        if("o" in bigxy[oy][ox]) { if (!myset.has(oy*10000+ox))myset.add(oy*10000+ox);} //将所有邻近的小鱼食物均压栈，以后再次刷新其路径
+    }
+    if (ox < 1 || ox > rightEdge || oy<1 || oy>bottomEdge) return;//越界直接返回，但bigxy数组比边界大2格，上面无问题
+    for (let a=0; a<360; a+=90) {
+        let x = ox + Math.round(Math.cos(a*Math.PI/180));
+        let y = oy + Math.round(Math.sin(a*Math.PI/180)); 
+        if ("o" in bigxy[oy][ox]) {
+            if (bigxy[oy][ox].o.power < allinfo[id].power - EAT_HEAD) AccessNode(ox,oy,x,y);
+            else if ((bigxy[oy][ox].o.power < allinfo[id].power - EAT_SIDE) && (Math.abs(a-bigxy[oy][ox].o.a) != 0)) AccessNode(ox,oy,x,y);
+            else if ((bigxy[oy][ox].o.power < allinfo[id].power) && (Math.abs(a-bigxy[oy][ox].o.a) == 180)) AccessNode(ox,oy,x,y);
+        } else AccessNode(ox,oy,x,y);
+    }
+}
+
+function AccessNode(ox,oy,x,y) { //导入一个邻居节点的信息
+    if (bigxy[y][x] == null) return;  //该邻居无数据，则直接返回
+    if (!("sum" in bigxy[y][x])) return; //
+     //若该邻居节点有路径
+    if ((bigxy[oy][ox].sum > bigxy[y][x].sum) || (bigxy[oy][ox].sum == bigxy[y][x].sum && bigxy[oy][ox].sum2>bigxy[y][x].sum2 )) {////有更短路径就采用 或 长度相同但转折点少一些
+        bigxy[oy][ox].sum = bigxy[y][x].sum+1;
+        if ("x" in bigxy[y][x]) { //该邻接点不是小鱼，所以它还有上级节点
+            if (bigxy[y][x].x==ox || bigxy[y][x].y==oy)     bigxy[oy][ox].sum2 = bigxy[y][x].sum2; // 同行或者同列，则不增加转折点
+            else bigxy[oy][ox].sum2 = bigxy[y][x].sum2+1; // 增加一个转折点
+        } else bigxy[oy][ox].sum2 = 0; //（x,y)就是小鱼本身，所以转折点数为0
+        bigxy[oy][ox].x = x; //保存上级节点
+        bigxy[oy][ox].y = y;
     }
 }
 
@@ -49,23 +118,23 @@ function testcircle(x,y) {
     let c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     c.setAttribute("cx", x*50+25);
     c.setAttribute("cy", y*50+25);
-    c.setAttribute("r", "20");
+    c.setAttribute("r", "15");
     c.setAttribute("fill", "yellow");
     document.getElementById("main").appendChild(c); //直接附着在main svg上
 }
 
 function FillinBigxy(id) { //将小鱼食物等全部放入大二维数组中 var bigxy; //全体坐标中每个点。
-    let bigxy = new Array(bottomEdge+1);// 
+    bigxy = new Array(bottomEdge+2);// length=edge+2，所以bigxy的元素编号范围为0-（edge+1）,实际存在小鱼的坐标为 1 - edge
     for (let i=0; i<bigxy.length; i++){
-        bigxy[i]=new Array(rightEdge+1);
+        bigxy[i]=new Array(rightEdge+2);
     }
     for ( let i in allinfo) {
-        bigxy[allinfo[i].y][allinfo[i].x] = {o:i};  // 将小鱼、食物均放进大二维数组
+        bigxy[allinfo[i].y][allinfo[i].x] = {o:allinfo[i]};  // 将小鱼、食物均放进大二维数组
     }
-    bigxy[allinfo[id].y][allinfo[id].x]["sum"] =0; //线段数
-    bigxy[allinfo[id].y][allinfo[id].x]["sum2"] =0; //转折点数
-    bigxy[allinfo[id].y][allinfo[id].x]["path"] =[{x:allinfo[id].x, y:allinfo[id].y}]; //从小鱼到本节点的最佳路径
-    return bigxy;
+    bigxy[allinfo[id].y][allinfo[id].x]["sum"] =0; //, sum2:0,x:0, y:0}; //线段数、转折点书、上级路径
+    bigxy[allinfo[id].y][allinfo[id].x]["sum2"] =0; 
+    // bigxy[allinfo[id].y][allinfo[id].x]["x"] =0; 
+    // bigxy[allinfo[id].y][allinfo[id].x]["y"] =0; 
 }
 
 

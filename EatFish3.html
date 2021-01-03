@@ -305,9 +305,6 @@
             for (let p in allinfo) {
                 if (allinfo[p].x == x && allinfo[p].y == y) w = allinfo[p]; //发现一个坐标相同者即表明该位置已经被占用，注意这里的return语句无效，还是要遍历完成全部元素
             }
-            for (let p in allinfo) {
-                if (allinfo[p].x == x && allinfo[p].y == y) w = allinfo[p]; //发现一个坐标相同者即表明该位置已经被占用，注意这里的return语句无效，还是要遍历完成全部元素
-            }
             if (x < 1 || x > rightEdge || y<1 || y>bottomEdge) w = "out"; //也不能出界，x为 1~22 (50-1100)， y为1-8 (50-400)之间
             return w;
         }        
@@ -348,7 +345,7 @@
 
         function Find_a_place(){
             for (var i=0; i<100; i++) { //最多试探100次，如果找不到一个地方放置小鱼，则禁止创造小鱼了
-                var x = Math.ceil(Math.random()*rightEdge); //x轴共有18个点位，50-850
+                var x = Math.ceil(Math.random()*rightEdge); //x轴共有18个点位，用math.ceil表示0号位跳过不用，但Edge会用到
                 var y = Math.ceil(Math.random()*bottomEdge);  //y轴共有8个点位，50-400
                 if (!IsXYAreaOccupied(x, y)) return [x, y]; // 找到位置就返回
             } //while (IsXYAreaOccupied(x, y)); //这里while后面的条件语句必须用括号包围，否则编译出错。
