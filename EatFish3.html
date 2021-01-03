@@ -195,7 +195,7 @@
                         var osin = Math.round(Math.sin(obj.a*Math.PI/180));
                         if (allinfo[id].power > (obj.power + EAT_HEAD))  eat(id, obj);
                         else if (allinfo[id].power > (obj.power + EAT_SIDE)) {
-                            console.log("side");
+                            console.log("side 可以吃侧面");
                             if ((obj.x + ocos == allinfo[id].x) && (obj.y+osin ==allinfo[id].y)) { //头碰头，扣分
                                 console.log(obj.power, obj.x, obj.y, obj.a,ocos, osin, allinfo[id].x, allinfo[id].y);
                                 collision(id);
@@ -203,7 +203,7 @@
                                 eat(id,obj);
                             }
                         } else if (allinfo[id].power > obj.power) { //可以吃尾巴
-                            console.log("tail");
+                            console.log("tail 只能吃尾巴");
                             if ((obj.x - ocos==allinfo[id].x) && (obj.y-osin==allinfo[id].y)) { //尾部接近，可以吃
                                 eat(id,obj);
                             } else {
@@ -236,7 +236,7 @@
             switch (obj.type)  //吃掉食物增加能力值
             {
                 case "fish":
-                    allinfo[id].power = Math.round(Math.max(1, allinfo[obj.id].power)*10/10);
+                    allinfo[id].power += Math.round(Math.max(1, allinfo[obj.id].power)*10/10);
                     break;
                 case "circle":
                     if (++allinfo[id].sstep > 10) { 
@@ -276,9 +276,9 @@
             div.innerText += str;
             div.scrollTop = div.scrollHeight; 
 //-------------------------下面刷状态区 ------------------
-            document.getElementById("circlenum").innerText = "圆形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="circle";}).length + "/" + csn + " 四面可吃";
-            document.getElementById("squarenum").innerText = "方形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="square";}).length + "/" + ssn + " 前>4";
-            document.getElementById("trianglenum").innerText = "三角形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="triangle";}).length + "/" + tsn + " 前>9, 侧>4";
+            document.getElementById("circlenum").innerText = "圆形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="circle";}).length + "/" + csn + " power=-11";
+            document.getElementById("squarenum").innerText = "方形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="square";}).length + "/" + ssn + " power=-6";
+            document.getElementById("trianglenum").innerText = "三角形食物数：" + Object.values(allinfo).filter(function(i){return i.type=="triangle";}).length + "/" + tsn + "power=-1";
             let f = document.getElementById("fishnum");
             f.innerHTML = "小鱼条数：" +  Object.values(allinfo).filter(function(i){return i.type=="fish";}).length + "/" + fsn + "\n"; //用innerHTML清楚了所有内容
             var tabNode=document.createElement("table");
@@ -375,6 +375,23 @@
             }
         }
      
+var StrategyPool=[Strategy1, Strategy2, Strategy3, Strategy5, Strategy5];
+const myEvent = new Event('poke');  // 定制一个消息事件，存为公共变量，用于平台授权小鱼走一次
+
+function StartGame() {
+    document.onkeydown = mykb; //挂载键盘处理，控制
+    
+    // const f = document.getElementById("f2");
+    // var cnt=0;
+    // f.addEventListener('poke', StrategyPool[1]); //可以
+    var mytimer = setInterval(function(){
+        Strategy2("f2");
+        // f.dispatchEvent(myEvent);
+        // cnt +=1;
+        // if (cnt > 300) clearInterval(mytimer); // 关闭这个自动定时调用
+        // console.log("one")
+    }, 500);
+}
 
     </script>
     <script src="StrategyFish.js"></script>

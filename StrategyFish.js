@@ -1,22 +1,3 @@
-var StrategyPool=[Strategy1, Strategy2, Strategy3, Strategy5, Strategy5];
-const myEvent = new Event('poke');  // 定制一个消息事件，存为公共变量，用于平台授权小鱼走一次
-
-function StartGame() {
-    document.onkeydown = mykb; //挂载键盘处理，控制
-    Strategy2("f2");
-    // const f = document.getElementById("f2");
-    // var cnt=0;
-    // f.addEventListener('poke', StrategyPool[1]); //可以
-    // var mytimer = setInterval(function(){
-    //     f.dispatchEvent(myEvent);
-    //     cnt +=1;
-    //     if (cnt > 300) clearInterval(mytimer); // 关闭这个自动定时调用
-    //     // console.log("one")
-    // }, 1000);
-}
-
-
-
 function Strategy1() { //这里e是鼠标点击事件，e.target是点击目标，实际点击时往往是最底层元素，所以用this更好。
     let x = Math.round(Math.random()*4-2);
     let y = Math.round(Math.random()*4-2);
@@ -51,8 +32,8 @@ function Strategy2(id) { //找出所有物体离我的距离|x-x1|+|y-y1|，再�
     }
     var sum=99999, sum2=99999,fx,fy;
     for (let i of myset) { //本循环找出最近的食物，距离为sum，
-        let y=parseInt(i/10000);
-        let x=i%10000;
+        var y=parseInt(i/10000);
+        var x=i%10000;
         RefreshPath(id, x-1, y);
         RefreshPath(id, x, y-1);
         RefreshPath(id, x+1, y);
@@ -66,19 +47,43 @@ function Strategy2(id) { //找出所有物体离我的距离|x-x1|+|y-y1|，再�
         // testcircle(element.x, element.y);
     }
 
-    if (sum != 99999) {
+    if (sum != 99999) { //找到了最短路径的食物在（fx，fy），下面吃掉它！
+        var path=[{x:fx, y:fy}];//将食物地址首先压入数组
         do {
-            testcircle(fx,fy);
+            // testcircle(fx,fy);
+            path.push({x:bigxy[fy][fx].x, y:bigxy[fy][fx].y});//将路径压入数组
             let xx =bigxy[fy][fx].x; //暂存x以保证bigxy参数稳定
             fy=bigxy[fy][fx].y;
             fx=xx;
         } while (fx!=allinfo[id].x || fy!= allinfo[id].y);
+        fx = path[0].x; //如果下面的循环没有发现转折点，则说明是一条直线，直接走到尽头即可
+        fy = path[0].y;
+        for (var i=path.length-1; i>=0; i--) { //本循环找出转折点，并存入fx，fy中
+            if (path[i].x != allinfo[id].x && path[i].y != allinfo[id].y) { //这已经过了第一个转折点
+                console.log("这里未定义的x错误",path[i].x, path[i].y, bigxy[path[i].y][path[i].x].x, bigxy[path[i].y][path[i].x].y);
+                fx = bigxy[path[i].y][path[i].x].x; //它的上级节点就是转折点，找出来
+                fy = bigxy[path[i].y][path[i].x].y;
+                break;
+            }
+        }
+        if (fx!=allinfo[id].x && fy!= allinfo[id].y) console.log("错误：这里应该是与小鱼在一条直线上的第一个转折点" + fx +fy);
+        if (fx!=allinfo[id].x) {//需要在东西向移动
+            let step = Math.min(Math.abs(fx-allinfo[id].x), allinfo[id].step); //尽可能移动远一点
+            let dir = (fx>allinfo[id].x) ? 0 : 180;
+            MoveFish(id,dir, step);
+        } else { //要在南北向移动
+            let step = Math.min(Math.abs(fy-allinfo[id].y), allinfo[id].step); //尽可能移动远一点
+            let dir = (fy>allinfo[id].y) ? 90 : 270;
+            MoveFish(id,dir, step);
+        }
     }
-
+    bigxy=null; //清楚数据，以便下次使用
+    myset=null;
 }
 
 function RefreshPath(id, ox, oy) { //更新坐标（x,y)到id点的最短路径，从4个方向寻找最短路径，并记录路径数组
-    console.log(ox, oy);
+    console.log("正在检查本节点该连往何处",ox, oy);
+    if (ox == allinfo[id].x && oy == allinfo[id].y) return; //小鱼自己不用刷新路径
     if (bigxy[oy][ox] == null)    bigxy[oy][ox]={sum:99999, sum2:99999,x:0,y:0}; //默认路径很长、转折点很多，必须在此赋值，否则不能增加属性
     else { //不管是空或者有数据，均初始化
         bigxy[oy][ox]["sum"]=99999;
